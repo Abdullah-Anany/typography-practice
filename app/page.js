@@ -108,7 +108,7 @@ function ScrambleText({
   );
 }
 
-function SelectionSquare({ color }) {
+function SelectionSquare({ color, hidden }) {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
 
@@ -144,6 +144,14 @@ function SelectionSquare({ color }) {
       viewBox="0 0 20 20"
       xmlns="http://www.w3.org/2000/svg"
       className="pointer-events-none fixed left-0 top-0 z-[100]"
+      animate={{
+        opacity: hidden ? 1 : 0,
+        scale: hidden ? 1 : 0,
+      }}
+      transition={{
+        duration: 0.2,
+        ease: [0.76, 0, 0.24, 1],
+      }}
       style={{
         x: springX,
         y: springY,
@@ -240,6 +248,17 @@ export default function Home() {
 
   const [activeLeft, setActiveLeft] = useState("List");
   const [activeRight, setActiveRight] = useState("Light");
+  const [systemTheme, setSystemTheme] = useState("Light");
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleChange = () => {
+      setSystemTheme(mediaQuery.matches ? "Dark" : "Light");
+    };
+    mediaQuery.addEventListener("change", handleChange);
+    handleChange();
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, []);
 
   const themes = {
     Light: {
@@ -257,7 +276,13 @@ export default function Home() {
     },
   };
 
-  const currentTheme = themes[activeRight];
+
+  const resolvedTheme =
+    activeRight === "System"
+      ? systemTheme
+      : activeRight;
+
+  const currentTheme = themes[resolvedTheme];
 
 
   useEffect(() => {
@@ -291,6 +316,7 @@ export default function Home() {
   const listRefs = useRef(null);
   const listRefs2 = useRef(null);
   const [hoveredImage, setHoveredImage] = useState(null);
+  const [hoveredProject, setHoveredProject] = useState(null);
   const paragraph = useRef(null);
 
   const projects = [
@@ -515,12 +541,12 @@ export default function Home() {
                 from: "end",
               },
               ease: "power4.in",
-              onComplete: () => {
-                // Only clear if this project is still active
-                if (activeProjectRef.current?.project === project) {
-                  activeProjectRef.current = null;
-                }
-              },
+              // onComplete: () => {
+              //   // Only clear if this project is still active
+              //   if (activeProjectRef.current?.project === project) {
+              //     activeProjectRef.current = null;
+              //   }
+              // },
             });
           }
         });
@@ -559,7 +585,7 @@ export default function Home() {
         ease: [0.76, 0, 0.24, 1],
       }}
     >
-      <SelectionSquare color={currentTheme.text} />
+      <SelectionSquare hidden={!hoveredImage} color={currentTheme.text} />
       <CursorImage image={hoveredImage} />
       <section className="showcase">
         <div className="project-list">
@@ -567,8 +593,14 @@ export default function Home() {
             <div
               key={project.title}
               className="project group"
-              onMouseEnter={() => setHoveredImage(project.image)}
-              onMouseLeave={() => setHoveredImage(null)}
+              onMouseEnter={() => {
+                setHoveredImage(project.image);
+                setHoveredProject(index);
+              }}
+              onMouseLeave={() => {
+                setHoveredImage(null);
+                setHoveredProject(null);
+              }}
             >
               {/* Left */}
               <span ref={(el) => (sideRefs.current[index * 2] = el)} className="project-side project-left">
@@ -580,10 +612,13 @@ export default function Home() {
                 ref={(el) => (titleRefs.current[index] = el)}
                 className="project-title"
                 animate={{
-                  color: currentTheme.title,
+                  color:
+                    hoveredProject === index
+                      ? currentTheme.text
+                      : currentTheme.title,
                 }}
                 transition={{
-                  duration: 0.6,
+                  duration: 0.3,
                   ease: [0.76, 0, 0.24, 1],
                 }}
               >

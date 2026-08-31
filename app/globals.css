@@ -44,9 +44,6 @@
   color: var(--text-color);
 }
 
-.project-title {
-  color: var(--title-color);
-}
 
 .showcase {
   position: absolute;
@@ -81,7 +78,7 @@
   line-height: 0.9;
   font-weight: 400;
   text-transform: uppercase;
-  color: #303030;
+  color: var(--title-color);
   white-space: nowrap;
   letter-spacing: -0.03em;
 
@@ -89,7 +86,7 @@
 
   transition:
     transform 300ms cubic-bezier(0.76, 0, 0.24, 1),
-    color 300ms ease;
+    color 100ms ease;
 }
 
 .project-side {
@@ -117,7 +114,6 @@
 
 .project:hover .project-title {
   transform: translateX(50px);
-  color: #0a0a0a;
 }
 
 .split-char {

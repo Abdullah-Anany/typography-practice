@@ -200,18 +200,89 @@ function CursorImage({ image }) {
     };
   }, [x, y]);
 
+  function PixelRevealImage({ image }) {
+    const pixelContainer = useRef(null);
+
+    const columns = 10;
+    const rows = 10;
+
+    useEffect(() => {
+      if (!image || !pixelContainer.current) return;
+
+      const pixels = pixelContainer.current.querySelectorAll(".pixel");
+
+      gsap.killTweensOf(pixels);
+
+      // Start completely transparent
+      gsap.set(pixels, {
+        opacity: 0,
+      });
+
+      // Randomly reveal image pieces
+      gsap.to(pixels, {
+        opacity: 1,
+        duration: 0.12,
+        stagger: {
+          amount: 0.8,
+          from: "random",
+        },
+        ease: "none",
+      });
+    }, [image]);
+
+    if (!image) return null;
+
+    return (
+      <div
+        ref={pixelContainer}
+        className="pixel-image-container"
+        style={{
+          gridTemplateColumns: `repeat(${columns}, 1fr)`,
+          gridTemplateRows: `repeat(${rows}, 1fr)`,
+        }}
+      >
+        {Array.from({ length: columns * rows }).map((_, index) => {
+          const column = index % columns;
+          const row = Math.floor(index / columns);
+
+          return (
+            <div
+              key={`${image}-${index}`}
+              className="pixel"
+            >
+              <img
+                src={image}
+                alt=""
+                draggable="false"
+                style={{
+                  position: "absolute",
+
+                  // Make every tile contain the full image
+                  width: `${columns * 100}%`,
+                  height: `${rows * 100}%`,
+
+                  // Move image into correct tile position
+                  left: `${-column * 100}%`,
+                  top: `${-row * 100}%`,
+
+                  objectFit: "cover",
+                  maxWidth: "none",
+                }}
+              />
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
   return (
     <motion.div
-      className="pointer-events-none fixed left-0 top-0 z-[90] w-[220px] h-[280px] overflow-hidden"
+      className="pointer-events-none fixed left-0 top-0 z-[90] w-[400px] h-[630px]"
       style={{
         x: springX,
         y: springY,
         translateX: "-50%",
         translateY: "-50%",
-      }}
-      initial={{
-        opacity: 0,
-        scale: 0.8,
       }}
       animate={{
         opacity: image ? 1 : 0,
@@ -222,29 +293,14 @@ function CursorImage({ image }) {
         ease: [0.76, 0, 0.24, 1],
       }}
     >
-      {image && (
-        <motion.img
-          key={image}
-          src={image}
-          alt=""
-          className="w-full h-full object-cover"
-          initial={{
-            scale: 1.2,
-          }}
-          animate={{
-            scale: 1,
-          }}
-          transition={{
-            duration: 0.5,
-            ease: [0.76, 0, 0.24, 1],
-          }}
-        />
-      )}
+      <PixelRevealImage image={image} />
     </motion.div>
   );
 }
 
 export default function Home() {
+
+
 
   const [activeLeft, setActiveLeft] = useState("List");
   const [activeRight, setActiveRight] = useState("Light");
@@ -417,10 +473,6 @@ export default function Home() {
         defaults: {
           ease: "power4.out",
         },
-      });
-
-      gsap.set(leftListItems, {
-        yPercent: 120,
       });
 
       gsap.set(

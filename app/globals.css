@@ -133,3 +133,38 @@
   pointer-events: none;
   user-select: none;
 }
+
+.pixel-image-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+
+  display: grid;
+  overflow: hidden;
+
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: transform;
+}
+
+.pixel {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+
+  will-change: opacity, transform;
+
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.pixel img {
+  position: absolute;
+  pointer-events: none;
+  user-select: none;
+  display: block;
+
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}

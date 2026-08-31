@@ -15,36 +15,43 @@ gsap.registerPlugin(SplitText);
 
 const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
-function ScrambleText({ children, className = "" }) {
+function ScrambleText({
+  children,
+  className = "",
+  onClick,
+  active = false,
+  side = "left",
+}) {
   const [text, setText] = useState(children);
   const intervalRef = useRef(null);
 
   const scramble = () => {
-    let iteration = 0;
-
     clearInterval(intervalRef.current);
 
+    let iteration = 0;
+    const originalText = String(children);
+
     intervalRef.current = setInterval(() => {
-      setText(
-        children
-          .split("")
-          .map((char, index) => {
-            if (char === " ") return " ";
+      const scrambled = originalText
+        .split("")
+        .map((char, index) => {
+          if (char === " ") return " ";
 
-            if (index < iteration) {
-              return children[index];
-            }
+          if (index < iteration) {
+            return originalText[index];
+          }
 
-            return chars[Math.floor(Math.random() * chars.length)];
-          })
-          .join("")
-      );
+          return chars[Math.floor(Math.random() * chars.length)];
+        })
+        .join("");
 
-      iteration += 1 / 2;
+      setText(scrambled);
 
-      if (iteration >= children.length) {
+      iteration += 0.5;
+
+      if (iteration >= originalText.length) {
         clearInterval(intervalRef.current);
-        setText(children);
+        setText(originalText);
       }
     }, 30);
   };
@@ -54,16 +61,54 @@ function ScrambleText({ children, className = "" }) {
   }, []);
 
   return (
-    <motion.p
+    <button
+      type="button"
       onMouseEnter={scramble}
-      className={className}
+      onClick={onClick}
+      className={`relative flex items-center gap-3 bg-transparent border-0 p-0 cursor-pointer ${className}`}
     >
-      {text}
-    </motion.p>
+      {/* Left side square */}
+      {side === "left" && (
+        <span
+          className={`absolute right-full mr-3 flex items-center justify-center transition-all duration-300 ${active
+            ? "opacity-100 scale-100"
+            : "opacity-0 scale-75"
+            }`}
+        >
+          <svg
+            width="9"
+            height="9"
+            viewBox="0 0 10 10"
+          >
+            <rect width="9" height="9" fill="var(--text-color)" />
+          </svg>
+        </span>
+      )}
+
+      <span>{text}</span>
+
+      {/* Right side square */}
+      {side === "right" && (
+        <span
+          className={`absolute left-full ml-3 flex items-center justify-center transition-all duration-300 ${active
+            ? "opacity-100 scale-100"
+            : "opacity-0 scale-75"
+            }`}
+        >
+          <svg
+            width="9"
+            height="9"
+            viewBox="0 0 10 10"
+          >
+            <rect width="9" height="9" fill="var(--text-color)" />
+          </svg>
+        </span>
+      )}
+    </button>
   );
 }
 
-function SelectionSquare() {
+function SelectionSquare({ color }) {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
 
@@ -97,7 +142,6 @@ function SelectionSquare() {
       width="20"
       height="20"
       viewBox="0 0 20 20"
-      fill="white"
       xmlns="http://www.w3.org/2000/svg"
       className="pointer-events-none fixed left-0 top-0 z-[100]"
       style={{
@@ -112,7 +156,7 @@ function SelectionSquare() {
         y="1"
         width="22"
         height="22"
-        stroke="white"
+        fill={color}
         strokeWidth="1"
       />
     </motion.svg>
@@ -193,6 +237,27 @@ function CursorImage({ image }) {
 }
 
 export default function Home() {
+
+  const [activeLeft, setActiveLeft] = useState("List");
+  const [activeRight, setActiveRight] = useState("Light");
+
+  const themes = {
+    Light: {
+      background: "oklch(100% 0 none)",
+      title: "#d4d4d4", // neutral-300
+      text: "#0a0a0a", // neutral-950
+      square: "#0a0a0a",
+    },
+
+    Dark: {
+      background: "oklch(19% 0 none)",
+      title: "#303030",
+      text: "#f5f5f5",
+      square: "#ffffff",
+    },
+  };
+
+  const currentTheme = themes[activeRight];
 
 
   useEffect(() => {
@@ -302,15 +367,11 @@ export default function Home() {
         charsClass: "split-char",
       });
 
-      const listSplit = new SplitText(listRefs.current, {
-        type: "lines",
-        mask: "lines",
-      });
+      const leftListItems =
+        listRefs.current.querySelectorAll(".left-list-item");
 
-      const listSplit2 = new SplitText(listRefs2.current, {
-        type: "lines",
-        mask: "lines",
-      });
+      const rightListItems =
+        listRefs2.current.querySelectorAll(".right-list-item");
 
 
 
@@ -331,38 +392,41 @@ export default function Home() {
           ease: "power4.out",
         },
       });
-      const leftListItems = listRefs.current.querySelectorAll(".list-item");
 
       gsap.set(leftListItems, {
         yPercent: 120,
       });
 
+      gsap.set(
+        [...leftListItems, ...rightListItems],
+        {
+          yPercent: 120,
+          opacity: 0,
+        }
+      );
+
       tl.to(
         leftListItems,
         {
           yPercent: 0,
-          duration: 0.6,
+          opacity: 1,
+          duration: 0.7,
           stagger: 0.08,
           ease: "power4.out",
         },
-        "<0.1"
+        0.2
       );
-
-      const rightListItems = listRefs2.current.querySelectorAll(".list-item");
-
-      gsap.set(rightListItems, {
-        yPercent: 120,
-      });
 
       tl.to(
         rightListItems,
         {
           yPercent: 0,
-          duration: 0.6,
+          opacity: 1,
+          duration: 0.7,
           stagger: 0.08,
           ease: "power4.out",
         },
-        "<0"
+        0.2
       );
 
       // LOOP + MENU letters rise
@@ -482,8 +546,20 @@ export default function Home() {
     return () => ctx.revert();
   }, []);
   return (
-    <main ref={container} className="main">
-      <SelectionSquare />
+    <motion.main
+      ref={container}
+      className="main"
+      animate={{
+        backgroundColor: currentTheme.background,
+        "--text-color": currentTheme.text,
+        "--title-color": currentTheme.title,
+      }}
+      transition={{
+        duration: 0.6,
+        ease: [0.76, 0, 0.24, 1],
+      }}
+    >
+      <SelectionSquare color={currentTheme.text} />
       <CursorImage image={hoveredImage} />
       <section className="showcase">
         <div className="project-list">
@@ -500,12 +576,19 @@ export default function Home() {
               </span>
 
               {/* Center */}
-              <h1
+              <motion.h1
                 ref={(el) => (titleRefs.current[index] = el)}
                 className="project-title"
+                animate={{
+                  color: currentTheme.title,
+                }}
+                transition={{
+                  duration: 0.6,
+                  ease: [0.76, 0, 0.24, 1],
+                }}
               >
                 {project.title}
-              </h1>
+              </motion.h1>
 
               {/* Right */}
               <span ref={(el) => (sideRefs.current[index * 2 + 1] = el)} className="project-side project-right">
@@ -518,7 +601,7 @@ export default function Home() {
 
       <header className="fixed inset-x-0 top-0 z-50">
         <div className="absolute left-10 top-6 overflow-hidden">
-          <div ref={loopRef} className="font-bebas-neue text-[clamp(1vw,2vw,5rem)] uppercase text-zinc-50 cursor-pointer select-none">
+          <div ref={loopRef} className="font-bebas-neue text-[clamp(1vw,2vw,5rem)] uppercase text-[var(--text-color)] cursor-pointer select-none">
             Loop
           </div>
         </div>
@@ -527,48 +610,83 @@ export default function Home() {
           <div ref={menuRef}>
             <span className="group block h-[2rem] overflow-hidden">
               <span className="flex flex-col transition-transform duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] group-hover:-translate-y-1/2">
-                <span className="font-bebas-neue text-[clamp(0.7vw,1.4vw,2rem)] uppercase text-zinc-50 cursor-pointer select-none">
+                <span className="font-bebas-neue text-[clamp(0.7vw,1.4vw,2rem)] uppercase text-[var(--text-color)] cursor-pointer select-none">
                   Menu
                 </span>
 
-                <span className="font-bebas-neue text-[clamp(0.7vw,1.4vw,2rem)] uppercase text-zinc-50 cursor-pointer select-none">
+                <span className="font-bebas-neue text-[clamp(0.7vw,1.4vw,2rem)] uppercase text-[var(--text-color)] cursor-pointer select-none">
                   Menu
                 </span>
               </span>
             </span>
           </div>
         </div>
-        <div ref={listRefs} className="absolute left-15 top-86">
-          <div>
-            <ScrambleText className="list-item font-geist-mono text-[clamp(0.5vw,1vw,2rem)] uppercase text-zinc-50 cursor-pointer select-none">
+        <div ref={listRefs} className="absolute left-15 top-90">
+          <div className="flex flex-col items-start">
+            <ScrambleText
+              side="left"
+              active={activeLeft === "List"}
+              onClick={() => setActiveLeft("List")}
+              className="left-list-item font-geist-mono text-[clamp(0.5vw,1vw,2rem)] uppercase text-[var(--text-color)] select-none"
+            >
               List
             </ScrambleText>
 
-            <ScrambleText className="list-item font-geist-mono text-[clamp(0.5vw,1vw,2rem)] uppercase text-zinc-50 cursor-pointer select-none">
+            <ScrambleText
+              side="left"
+              active={activeLeft === "Gallery"}
+              onClick={() => setActiveLeft("Gallery")}
+              className="left-list-item font-geist-mono text-[clamp(0.5vw,1vw,2rem)] uppercase text-[var(--text-color)] select-none"
+            >
               Gallery
             </ScrambleText>
 
-            <ScrambleText className="list-item font-geist-mono text-[clamp(0.5vw,1vw,2rem)] uppercase text-zinc-50 cursor-pointer select-none">
+            <ScrambleText
+              side="left"
+              active={activeLeft === "Loop"}
+              onClick={() => setActiveLeft("Loop")}
+              className="left-list-item font-geist-mono text-[clamp(0.5vw,1vw,2rem)] uppercase text-[var(--text-color)] select-none"
+            >
               Loop
             </ScrambleText>
 
-            <ScrambleText className="list-item font-geist-mono text-[clamp(0.5vw,1vw,2rem)] uppercase text-zinc-50 cursor-pointer select-none">
+            <ScrambleText
+              side="left"
+              active={activeLeft === "Spiral"}
+              onClick={() => setActiveLeft("Spiral")}
+              className="left-list-item font-geist-mono text-[clamp(0.5vw,1vw,2rem)] uppercase text-[var(--text-color)] select-none"
+            >
               Spiral
             </ScrambleText>
           </div>
         </div>
 
-        <div ref={listRefs2} className="absolute right-15 top-86">
-          <div>
-            <ScrambleText className="list-item font-geist-mono text-right text-[clamp(0.5vw,1vw,2rem)] uppercase text-zinc-50 cursor-pointer select-none">
+        <div ref={listRefs2} className="absolute right-15 top-90">
+          <div className="flex flex-col items-end">
+            <ScrambleText
+              side="right"
+              active={activeRight === "Light"}
+              onClick={() => setActiveRight("Light")}
+              className="right-list-item font-geist-mono text-right text-[clamp(0.5vw,1vw,2rem)] uppercase text-[var(--text-color)] select-none"
+            >
               Light
             </ScrambleText>
 
-            <ScrambleText className="list-item font-geist-mono text-right text-[clamp(0.5vw,1vw,2rem)] uppercase text-zinc-50 cursor-pointer select-none">
+            <ScrambleText
+              side="right"
+              active={activeRight === "Dark"}
+              onClick={() => setActiveRight("Dark")}
+              className="right-list-item font-geist-mono text-right text-[clamp(0.5vw,1vw,2rem)] uppercase text-[var(--text-color)] select-none"
+            >
               Dark
             </ScrambleText>
 
-            <ScrambleText className="list-item font-geist-mono text-right text-[clamp(0.5vw,1vw,2rem)] uppercase text-zinc-50 cursor-pointer select-none">
+            <ScrambleText
+              side="right"
+              active={activeRight === "System"}
+              onClick={() => setActiveRight("System")}
+              className="right-list-item font-geist-mono text-right text-[clamp(0.5vw,1vw,2rem)] uppercase text-[var(--text-color)] select-none"
+            >
               System
             </ScrambleText>
           </div>
@@ -576,21 +694,21 @@ export default function Home() {
 
         <div className="absolute left-10 top-165 overflow-hidden">
           <div ref={paragraph} className="paragraph">
-            <p className=" font-bold uppercase text-zinc-50 cursor-pointer select-none">
+            <p className=" font-bold uppercase text-[var(--text-color)] cursor-pointer select-none">
               Just Another Creative Studio.
             </p>
-            <p className=" font-light uppercase text-zinc-50 cursor-pointer select-none">
+            <p className=" font-light uppercase text-[var(--text-color)] cursor-pointer select-none">
               Nothing special. Unless you're
             </p>
-            <p className=" font-light uppercase text-zinc-50 cursor-pointer select-none">
+            <p className=" font-light uppercase text-[var(--text-color)] cursor-pointer select-none">
               Here to build a brand thats
             </p>
-            <p className=" font-bold uppercase text-zinc-50 cursor-pointer select-none">
+            <p className=" font-bold uppercase text-[var(--text-color)] cursor-pointer select-none">
               Impossible to ignore.
             </p>
           </div>
         </div>
       </header>
-    </main>
+    </motion.main>
   );
 }

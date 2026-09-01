@@ -1,6 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState, useEffect } from "react";
+import Preloader from "./components/preloader";
 import gsap from "gsap";
 import { SplitText } from "gsap/SplitText";
 import Lenis from "lenis";
@@ -299,7 +300,7 @@ function CursorImage({ image }) {
 }
 
 export default function Home() {
-
+  const entranceTimeline = useRef(null);
 
 
   const [activeLeft, setActiveLeft] = useState("List");
@@ -373,6 +374,7 @@ export default function Home() {
   const listRefs2 = useRef(null);
   const [hoveredImage, setHoveredImage] = useState(null);
   const [hoveredProject, setHoveredProject] = useState(null);
+  const [isLoaded, setIsLoaded] = useState(false);
   const paragraph = useRef(null);
 
   const projects = [
@@ -428,7 +430,11 @@ export default function Home() {
 
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
-      // Split project titles
+
+      // -----------------------------------------
+      // SPLIT TEXT
+      // -----------------------------------------
+
       const titleSplits = titleRefs.current.map((title) => {
         return new SplitText(title, {
           type: "chars",
@@ -443,7 +449,6 @@ export default function Home() {
         });
       });
 
-      // Split LOOP
       const loopSplit = new SplitText(loopRef.current, {
         type: "chars",
         charsClass: "split-char",
@@ -455,25 +460,20 @@ export default function Home() {
       const rightListItems =
         listRefs2.current.querySelectorAll(".right-list-item");
 
-
-
-      // Split paragraph
       const paragraphSplit = new SplitText(paragraph.current, {
         type: "lines",
         mask: "lines",
       });
 
-      // Split MENU
       const menuSplit = new SplitText(menuRef.current, {
         type: "chars",
         charsClass: "split-char",
       });
 
-      const tl = gsap.timeline({
-        defaults: {
-          ease: "power4.out",
-        },
-      });
+
+      // -----------------------------------------
+      // HIDE EVERYTHING FIRST
+      // -----------------------------------------
 
       gsap.set(
         [...leftListItems, ...rightListItems],
@@ -483,57 +483,104 @@ export default function Home() {
         }
       );
 
-      tl.to(
-        leftListItems,
-        {
-          yPercent: 0,
-          opacity: 1,
-          duration: 0.7,
-          stagger: 0.08,
-          ease: "power4.out",
-        },
-        0.2
-      );
-
-      tl.to(
-        rightListItems,
-        {
-          yPercent: 0,
-          opacity: 1,
-          duration: 0.7,
-          stagger: 0.08,
-          ease: "power4.out",
-        },
-        0.2
-      );
-
-      // LOOP + MENU letters rise
-      tl.fromTo(
-        [...loopSplit.chars, ...menuSplit.chars,],
+      gsap.set(
+        [...loopSplit.chars, ...menuSplit.chars],
         {
           yPercent: 120,
-        },
-        {
-          yPercent: 0,
-          duration: 0.4,
-          stagger: 0.05,
         }
       );
 
-      // Paragraph lines rise
-      tl.fromTo(
-        paragraphSplit.lines,
-        {
+      gsap.set(paragraphSplit.lines, {
+        yPercent: 120,
+      });
+
+      titleSplits.forEach((split) => {
+        gsap.set(split.chars, {
           yPercent: 120,
+        });
+      });
+
+      sideSplits.forEach((split) => {
+        gsap.set(split.chars, {
+          yPercent: 120,
+        });
+      });
+
+
+      // -----------------------------------------
+      // CREATE ENTRANCE TIMELINE
+      // BUT DON'T PLAY IT YET
+      // -----------------------------------------
+
+      const tl = gsap.timeline({
+        paused: true,
+        defaults: {
+          ease: "power4.out",
         },
+      });
+
+
+      // Lists
+      tl.to(
+        [...leftListItems, ...rightListItems],
+        {
+          yPercent: 0,
+          opacity: 1,
+          duration: 0.7,
+          stagger: 0.08,
+        },
+        0
+      );
+
+
+      // Loop + Menu
+      tl.to(
+        [...loopSplit.chars, ...menuSplit.chars],
+        {
+          yPercent: 0,
+          duration: 0.5,
+          stagger: 0.04,
+        },
+        0
+      );
+
+
+      // Paragraph
+      tl.to(
+        paragraphSplit.lines,
         {
           yPercent: 0,
           duration: 0.8,
           stagger: 0.08,
-          ease: "power4.out",
         },
-        "<0"
+        0.1
       );
+
+
+      // Project titles
+      titleSplits.forEach((split) => {
+        tl.to(
+          split.chars,
+          {
+            yPercent: 0,
+            duration: 1,
+            stagger: 0.025,
+          },
+          0.15
+        );
+      });
+
+
+      // -----------------------------------------
+      // SAVE TIMELINE
+      // -----------------------------------------
+
+      entranceTimeline.current = tl;
+
+
+      // -----------------------------------------
+      // YOUR HOVER ANIMATIONS
+      // -----------------------------------------
 
       const projectElements = gsap.utils.toArray(".project");
 
@@ -546,28 +593,26 @@ export default function Home() {
           ...rightSplit.chars,
         ];
 
-        // Initial state
-        gsap.set(sideChars, {
-          yPercent: 120,
-        });
-
         project.addEventListener("mouseenter", () => {
-          // Hide previous project immediately
-          if (activeProjectRef.current) {
-            gsap.killTweensOf(activeProjectRef.current.chars);
 
-            gsap.set(activeProjectRef.current.chars, {
-              yPercent: 120,
-            });
+          if (activeProjectRef.current) {
+            gsap.killTweensOf(
+              activeProjectRef.current.chars
+            );
+
+            gsap.set(
+              activeProjectRef.current.chars,
+              {
+                yPercent: 120,
+              }
+            );
           }
 
-          // This is now the active project
           activeProjectRef.current = {
             project,
             chars: sideChars,
           };
 
-          // Show current project
           gsap.killTweensOf(sideChars);
 
           gsap.to(sideChars, {
@@ -579,7 +624,7 @@ export default function Home() {
         });
 
         project.addEventListener("mouseleave", () => {
-          // Only hide if this is the currently active project
+
           if (
             activeProjectRef.current?.project === project
           ) {
@@ -593,35 +638,18 @@ export default function Home() {
                 from: "end",
               },
               ease: "power4.in",
-              // onComplete: () => {
-              //   // Only clear if this project is still active
-              //   if (activeProjectRef.current?.project === project) {
-              //     activeProjectRef.current = null;
-              //   }
-              // },
             });
           }
         });
       });
 
-      // Project titles
-      titleSplits.forEach((split) => {
-        tl.fromTo(
-          split.chars,
-          {
-            yPercent: 120,
-          },
-          {
-            yPercent: 0,
-            duration: 1,
-            stagger: 0.025,
-          },
-          0.18
-        );
-      });
     }, container);
 
-    return () => ctx.revert();
+    return () => {
+      entranceTimeline.current = null;
+      ctx.revert();
+    };
+
   }, []);
   return (
     <motion.main
@@ -637,6 +665,17 @@ export default function Home() {
         ease: [0.76, 0, 0.24, 1],
       }}
     >
+      {!isLoaded && (
+        <Preloader
+          onComplete={() => {
+            setIsLoaded(true);
+
+            requestAnimationFrame(() => {
+              entranceTimeline.current?.play();
+            });
+          }}
+        />
+      )}
       <SelectionSquare hidden={!hoveredImage} color={currentTheme.text} />
       <CursorImage image={hoveredImage} />
       <section className="showcase">
